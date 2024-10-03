@@ -5,12 +5,12 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
-
+import PayPalButton from "./PayPalButton"; // Correct import path for PayPalButton
 
 function PlaceOrder() {
   const { getTotalCartAmount, token, cartItems, url, food_list } =
     useContext(StoreContext);
-    const navigate=useNavigate();
+  const navigate = useNavigate();
 
   const [data, setData] = useState({
     firstName: "",
@@ -27,13 +27,9 @@ function PlaceOrder() {
   useEffect(() => {
     if (!token) {
       navigate('/cart');
-     
-    }
-    else if(getTotalCartAmount()===0){
+    } else if (getTotalCartAmount() === 0) {
       navigate('/cart');
     }
-    
-  
   }, [token]);
 
   const onChangeHandler = (e) => {
@@ -41,18 +37,13 @@ function PlaceOrder() {
     setData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const placeOrder = async (event) => {
-    event.preventDefault();
+  const createOrder = async () => {
     let orderItems = [];
     food_list.map((item) => {
       if (cartItems[item._id] > 0) {
-        
-        
         let iteminfo = item;
         iteminfo["quantity"] = cartItems[item._id];
         orderItems.push(iteminfo);
-       
-
       }
     });
     let orderData = {
@@ -63,19 +54,28 @@ function PlaceOrder() {
     let response = await axios.post(url + "/api/order/place", orderData, {
       headers: { token },
     });
-    if(response.data.success){
-      console.log(response.data);
-      
-      const {session_url}=response.data;
-      window.location.replace(session_url);
-      
-    }else{ 
+    if (response.data.success) {
+      return response.data.orderID; // Return the order ID for PayPal
+    } else {
+      toast.error(response.data.message);
+      throw new Error("Order creation failed");
+    }
+  };
+
+  const onApprove = async (orderID) => {
+    let response = await axios.post(url + "/api/order/verify", { orderID, success: true }, {
+      headers: { token },
+    });
+    if (response.data.success) {
+      toast.success("Order placed successfully!");
+      navigate('/orders'); // Redirect to orders page or any other page
+    } else {
       toast.error(response.data.message);
     }
   };
 
   return (
-    <form className="place-order" onSubmit={placeOrder}>
+    <form className="place-order" onSubmit={(e) => e.preventDefault()}>
       <ToastContainer />
       <div className="place-order-left">
         <p className="title">Delivery Information</p>
@@ -178,9 +178,7 @@ function PlaceOrder() {
                 ${getTotalCartAmount() === 0 ? 0 : getTotalCartAmount() + 2}
               </b>
             </div>
-            <button type="submit" disabled={getTotalCartAmount() === 0}>
-              PROCEED TO PAYMENT
-            </button>
+            <PayPalButton createOrder={createOrder} onApprove={onApprove} />
           </div>
         </div>
       </div>
