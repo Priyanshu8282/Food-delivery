@@ -33,7 +33,7 @@ function Add() {
     }
 
     try {
-     const response = await axios.post('http://localhost:3000/api/food/add', formData, {
+     const response = await axios.post('https://food-delivery-j42j.onrender.com/api/food/add', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         } 
