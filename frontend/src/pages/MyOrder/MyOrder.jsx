@@ -7,13 +7,22 @@ import { assets } from '../../assets/assets';
 function MyOrder() {
   const { url, token } = useContext(StoreContext);
   const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const fetchOrder = async () => {
     try {
-      const response = await axios.post(url + "/api/order/userorders", {}, { headers: { token } });
-      setData(response.data.data);
+      const response = await axios.post(url + "/api/order/userorders", {}, { headers: { Authorization: `Bearer ${token}` } });
+      if (response.data.success) {
+        setData(response.data.orders);
+      } else {
+        setError(response.data.message);
+      }
+      setLoading(false);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
+      setError("Failed to fetch orders. Please try again later.");
+      setLoading(false);
     }
   };
 
@@ -22,6 +31,14 @@ function MyOrder() {
       fetchOrder();
     }
   }, [token]);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (error) {
+    return <div>{error}</div>;
+  }
 
   return (
     <div className='my-orders'>
@@ -40,8 +57,8 @@ function MyOrder() {
             </p>
             <p>${order.amount}.00</p>
             <p>Items: {order.items ? order.items.length : 0}</p>
-            <p><span>&#x25cf</span> {order.status}</p>
-            <button onClick={fetchOrder}>Track Order</button>
+            <p><span>&#x25cf;</span> {order.status}</p>
+            <button onClick={() => alert('Tracking order...')}>Track Order</button>
           </div>
         ))}
       </div>
