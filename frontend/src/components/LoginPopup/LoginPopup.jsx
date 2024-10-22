@@ -5,7 +5,6 @@ import { StoreContext } from "../../context/StoreContext";
 import axios from "axios";
 import { toast } from 'react-toastify';
 
-
 function LoginPopup() {
   const { url, setToken } = useContext(StoreContext);
   const [isLogin, setIsLogin] = useState(true); // Use boolean state for login/register
@@ -14,7 +13,6 @@ function LoginPopup() {
     email: "",
     password: "",
   });
-  const [loading, setLoading] = useState(false); // Add loading state
 
   const onChangeHandler = (event) => {
     const { name, value } = event.target;
@@ -23,7 +21,6 @@ function LoginPopup() {
 
   const onLogin = async (event) => {
     event.preventDefault();
-    setLoading(true); // Set loading to true when the request starts
     let newUrl = url;
     try {
       if (isLogin) {
@@ -44,8 +41,6 @@ function LoginPopup() {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || (isLogin ? 'Login failed' : 'Registration failed'));
-    } finally {
-      setLoading(false); // Set loading to false when the request ends
     }
   };
 
@@ -88,8 +83,8 @@ function LoginPopup() {
             required
           />
         </div>
-        <button className="btn" type="submit" disabled={loading}>
-          {loading ? "Loading..." : isLogin ? "Login" : "Create account"}
+        <button className="btn" type="submit">
+          {isLogin ? "Login" : "Create account"}
         </button>
         <div className="login-popup-condition">
           <input type="checkbox" required id="checkbox" />
