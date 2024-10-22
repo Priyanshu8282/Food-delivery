@@ -1,64 +1,59 @@
 import "./LoginPopup.css";
-import { useContext, useState,useEffect } from "react";
+import { useContext, useState } from "react";
 import { assets } from "../../assets/assets";
 import { StoreContext } from "../../context/StoreContext";
 import axios from "axios";
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-
-function LoginPopup({ setShowLogin }) {
+function LoginPopup() {
   const { url, setToken } = useContext(StoreContext);
-  const [currState, setCurrState] = useState("Login");
+  const [isLogin, setIsLogin] = useState(true); // Use boolean state for login/register
   const [data, setData] = useState({
     name: "",
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false); // Add loading state
 
   const onChangeHandler = (event) => {
-    const name = event.target.name;
-    const value = event.target.value;
-    setData((data) => ({ ...data, [name]: value }));
+    const { name, value } = event.target;
+    setData((prevData) => ({ ...prevData, [name]: value }));
   };
 
   const onLogin = async (event) => {
     event.preventDefault();
+    setLoading(true); // Set loading to true when the request starts
     let newUrl = url;
-    try{
-    if (currState === "Login") {
-      newUrl += "/api/user/login";
-      toast.success("Logged in successfully");
-    }
-    
-     else {
-      newUrl += "/api/user/register";
-      toast.success("Registered successfully");
-    }
-  }
-  catch (error) {
-    toast.error(error.response.data.message || 'Login failed');
-  }
-    const response = await axios.post(newUrl, data);
+    try {
+      if (isLogin) {
+        newUrl += "/api/user/login";
+      } else {
+        newUrl += "/api/user/register";
+      }
 
-    
-    if (response.data.success) {
-      setToken(response.data.token);
-      localStorage.setItem("token", response.data.token);
-      setShowLogin(false); // Close the login popup on success
-    } else {
-      alert(response.data.message);
+      const response = await axios.post(newUrl, data);
+
+      if (response.data.success) {
+        setToken(response.data.token);
+        localStorage.setItem("token", response.data.token);
+        setShowLogin(false); // Close the login popup on success
+        toast.success(isLogin ? "Logged in successfully" : "Registered successfully");
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || (isLogin ? 'Login failed' : 'Registration failed'));
+    } finally {
+      setLoading(false); // Set loading to false when the request ends
     }
   };
 
-
-
   return (
     <div className="login-popup">
-      <ToastContainer/>
       <form className="login-popup-container" onSubmit={onLogin}>
         <div className="login-popup-title">
-          <h2>{currState}</h2>
+          <h2>{isLogin ? "Login" : "Sign Up"}</h2>
           <img
             src={assets.cross_icon}
             alt="close"
@@ -66,7 +61,7 @@ function LoginPopup({ setShowLogin }) {
           />
         </div>
         <div className="login-popup-inputs">
-          {currState === "Login" ? null : (
+          {!isLogin && (
             <input
               type="text"
               name="name"
@@ -93,8 +88,8 @@ function LoginPopup({ setShowLogin }) {
             required
           />
         </div>
-        <button className="btn" type="submit">
-          {currState === "Sign Up" ? "Create account" : "Login"}
+        <button className="btn" type="submit" disabled={loading}>
+          {loading ? "Loading..." : isLogin ? "Login" : "Create account"}
         </button>
         <div className="login-popup-condition">
           <input type="checkbox" required id="checkbox" />
@@ -104,15 +99,15 @@ function LoginPopup({ setShowLogin }) {
             </p>
           </label>
         </div>
-        {currState === "Login" ? (
+        {isLogin ? (
           <p>
             Create a new account?{" "}
-            <span onClick={() => setCurrState("Sign Up")}>Click here</span>
+            <span onClick={() => setIsLogin(false)}>Click here</span>
           </p>
         ) : (
           <p>
             Already have an account?{" "}
-            <span onClick={() => setCurrState("Login")}>Login here</span>
+            <span onClick={() => setIsLogin(true)}>Login here</span>
           </p>
         )}
       </form>

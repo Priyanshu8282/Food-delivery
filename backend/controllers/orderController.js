@@ -14,6 +14,15 @@ paypal.configure({
 // Placing user order for frontend
 const placeOrder = async (req, res) => {
     try {
+        const { userId } = req.body;
+        console.log(userId);
+        
+
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "User ID is required" });
+        }
+
+        // Create a new order in the database
         const newOrder = new orderModel({
             userId: req.body.userId,
             items: req.body.items,
@@ -23,6 +32,7 @@ const placeOrder = async (req, res) => {
         await newOrder.save();
         await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
 
+        // Prepare items for PayPal payment
         const items = req.body.items.map(item => ({
             name: item.name,
             sku: item._id,
@@ -43,6 +53,7 @@ const placeOrder = async (req, res) => {
         const deliveryAmount = parseFloat(deliveryCharge.price);
         const totalAmount = (itemTotal + deliveryAmount).toFixed(2);
 
+        // Create PayPal payment JSON
         const create_payment_json = {
             intent: "sale",
             payer: {
@@ -67,21 +78,21 @@ const placeOrder = async (req, res) => {
             }]
         };
 
+        // Create PayPal payment
         paypal.payment.create(create_payment_json, (error, payment) => {
             if (error) {
-                console.log("PayPal Error:", error.response.details);
-                res.json({ success: false, message: "Failed to create PayPal payment" });
+                console.error("PayPal Error:", error.response);
+                res.status(500).json({ success: false, message: "Failed to create PayPal payment", error: error.response });
             } else {
                 const approvalUrl = payment.links.find(link => link.rel === "approval_url").href;
-                res.json({ success: true, approval_url: approvalUrl });
+                res.status(200).json({ success: true, approval_url: approvalUrl });
             }
         });
     } catch (err) {
-        console.log(err);
-        res.json({ success: false, message: "Failed to place order" });
+        console.error("Order Creation Error:", err);
+        res.status(500).json({ success: false, message: "Failed to place order", error: err });
     }
 };
-
 const verifyOrder = async (req, res) => {
     const { orderId, success } = req.query; 
     console.log(orderId);
@@ -99,29 +110,32 @@ const verifyOrder = async (req, res) => {
         res.json({ success: false, message: "Failed to verify order" });
     }
 };
-
-// User order from frontend
+// Fetch user orders
 const userOrders = async (req, res) => {
     try {
-        const orders = await orderModel.find({ userId: req.body.user._id });
-        res.json({ success: true, data: orders });
+      const orders = await orderModel.find(req.body.userId);
+      
+      console.log(orders);
+      
+
+        res.status(200).json({ success: true, orders });
     } catch (err) {
-        console.log(err);
-        res.json({ success: false, message: "Failed to fetch orders" });
+        console.error("Error fetching user orders:", err);
+        res.status(500).json({ success: false, message: "Failed to fetch user orders", error: err });
     }
 };
+
 
 const listOrders = async (req, res) => {
     try {
         const orders = await orderModel.find({});
-        res.json({ success: true, data: orders });
+        res.json({ success: true, orders });
     } catch (err) {
         console.log(err);
         res.json({ success: false, message: "Failed to fetch orders" });
     }
 };
 
-// API for updating order status
 const updateOrderStatus = async (req, res) => {
     try {
         await orderModel.findByIdAndUpdate(req.body.orderId, { status: req.body.status });
@@ -132,4 +146,5 @@ const updateOrderStatus = async (req, res) => {
     }
 };
 
-export { placeOrder, verifyOrder, userOrders, listOrders, updateOrderStatus };
+
+export { placeOrder, userOrders,listOrders,updateOrderStatus,verifyOrder};

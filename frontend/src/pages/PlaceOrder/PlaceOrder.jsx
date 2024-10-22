@@ -8,8 +8,7 @@ import { useNavigate } from "react-router-dom";
 import PayPalButton from "./PayPalButton"; // Correct import path for PayPalButton
 
 function PlaceOrder() {
-  const { getTotalCartAmount, token, cartItems, url, food_list } =
-    useContext(StoreContext);
+  const { getTotalCartAmount, token, cartItems, url, food_list } = useContext(StoreContext);
   const navigate = useNavigate();
 
   const [data, setData] = useState({
@@ -30,7 +29,7 @@ function PlaceOrder() {
     } else if (getTotalCartAmount() === 0) {
       navigate('/cart');
     }
-  }, [token]);
+  }, [token, getTotalCartAmount, navigate]);
 
   const onChangeHandler = (e) => {
     const { name, value } = e.target;
@@ -38,39 +37,52 @@ function PlaceOrder() {
   };
 
   const createOrder = async () => {
-    let orderItems = [];
-    food_list.map((item) => {
-      if (cartItems[item._id] > 0) {
-        let iteminfo = item;
-        iteminfo["quantity"] = cartItems[item._id];
-        orderItems.push(iteminfo);
+    try {
+      let orderItems = [];
+      food_list.forEach((item) => {
+        if (cartItems[item._id] > 0) {
+          let iteminfo = { ...item, quantity: cartItems[item._id] };
+          orderItems.push(iteminfo);
+        }
+      });
+
+      let orderData = {
+        address: data,
+        items: orderItems,
+        amount: getTotalCartAmount() + 2,
+      };
+
+      let response = await axios.post(url + "/api/order/place", orderData, {
+        headers: { token },
+      });
+
+      if (response.data.success) {
+        return response.data.orderID; // Return the order ID for PayPal
+      } else {
+        toast.error(response.data.message);
+        throw new Error("Order creation failed");
       }
-    });
-    let orderData = {
-      address: data,
-      items: orderItems,
-      amount: getTotalCartAmount() + 2,
-    };
-    let response = await axios.post(url + "/api/order/place", orderData, {
-      headers: { token },
-    });
-    if (response.data.success) {
-      return response.data.orderID; // Return the order ID for PayPal
-    } else {
-      toast.error(response.data.message);
-      throw new Error("Order creation failed");
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast.error('Error creating order');
     }
   };
 
   const onApprove = async (orderID) => {
-    let response = await axios.post(url + "/api/order/verify", { orderID, success: true }, {
-      headers: { token },
-    });
-    if (response.data.success) {
-      toast.success("Order placed successfully!");
-      navigate('/orders'); // Redirect to orders page or any other page
-    } else {
-      toast.error(response.data.message);
+    try {
+      let response = await axios.post(url + "/api/order/verify", { orderID, success: true }, {
+        headers: { token },
+      });
+
+      if (response.data.success) {
+        toast.success("Order placed successfully!");
+        navigate('/orders'); // Redirect to orders page or any other page
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error('Error verifying order:', error);
+      toast.error('Error verifying order');
     }
   };
 
