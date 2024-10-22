@@ -4,7 +4,7 @@ import { assets } from "../../assets/assets";
 import { StoreContext } from "../../context/StoreContext";
 import axios from "axios";
 import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+
 
 function LoginPopup() {
   const { url, setToken } = useContext(StoreContext);

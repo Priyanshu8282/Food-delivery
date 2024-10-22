@@ -12,15 +12,8 @@ function MyOrder() {
 
   const fetchOrder = async () => {
     try {
-      const response = await axios.post(url + "/api/order/userorders", {}, { headers: { Authorization: `Bearer ${token}` } });
-      console.log('API Response:', response.data);
-      
-      if (response.data.success) {
-        setData(response.data.orders);
-      } else {
-        setError(response.data.message);
-      }
-      setLoading(false);
+      const response = await axios.post(url + "/api/order/userorders", {}, { headers: { token } });
+      setData(response.data.data);
     } catch (error) {
       console.error("Failed to fetch orders:", error);
       setError("Failed to fetch orders. Please try again later.");

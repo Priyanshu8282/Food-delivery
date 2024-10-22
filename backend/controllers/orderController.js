@@ -113,12 +113,8 @@ const verifyOrder = async (req, res) => {
 // Fetch user orders
 const userOrders = async (req, res) => {
     try {
-      const orders = await orderModel.find(req.body.userId);
-      
-      console.log(orders);
-      
-
-        res.status(200).json({ success: true, orders });
+        const orders = await orderModel.find({ userId: req.body.user._id });
+        res.json({ success: true, data: orders });
     } catch (err) {
         console.error("Error fetching user orders:", err);
         res.status(500).json({ success: false, message: "Failed to fetch user orders", error: err });
@@ -146,5 +142,4 @@ const updateOrderStatus = async (req, res) => {
     }
 };
 
-
-export { placeOrder, userOrders,listOrders,updateOrderStatus,verifyOrder};
+export { placeOrder, verifyOrder, userOrders, listOrders, updateOrderStatus };
