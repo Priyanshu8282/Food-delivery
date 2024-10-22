@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { assets } from '../../assets/assets';
 
 function Order() {
-  const url = "http://localhost:3000";
+  const url = "https://food-delivery-j42j.onrender.com";
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
