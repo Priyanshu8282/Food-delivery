@@ -19,11 +19,19 @@ app.use(cors());
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const path = require('path');
+app.use(express.static(path.join(__dirname, 'frontend/dist')));
+
+
 
 // db connection
 connectDb();
 
 // api endpoints
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'frontend/dist', 'index.html'));
+});
+
 app.use("/api/food", foodRouter);
 app.use("/images", express.static(path.join(__dirname, 'uploads')));
 app.use("/api/user", userRouter);
