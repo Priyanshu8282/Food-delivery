@@ -13,10 +13,15 @@ function MyOrder() {
   const fetchOrder = async () => {
     try {
       const response = await axios.post(url + "/api/order/userorders", {}, { headers: { token } });
-      setData(response.data.data);
+      if (response.data.success) {
+        setData(response.data.orders); // Ensure the correct field is used
+      } else {
+        setError(response.data.message);
+      }
     } catch (error) {
       console.error("Failed to fetch orders:", error);
       setError("Failed to fetch orders. Please try again later.");
+    } finally {
       setLoading(false);
     }
   };

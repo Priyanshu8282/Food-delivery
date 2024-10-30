@@ -113,13 +113,23 @@ const verifyOrder = async (req, res) => {
 // Fetch user orders
 const userOrders = async (req, res) => {
     try {
-        const orders = await orderModel.find({});
-        res.json({ success: true,orders });
+        const userId = req.body.userId; // Assuming the user ID is stored in req.user by the auth middleware
+        console.log("userId", userId);
+
+        const orders = await orderModel.find({userId});
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({ success: false, message: "No orders found for this user" });
+        }
+
+        res.status(200).json({ success: true, orders });
     } catch (err) {
         console.error("Error fetching user orders:", err);
         res.status(500).json({ success: false, message: "Failed to fetch user orders", error: err });
     }
 };
+
+
 
 
 const listOrders = async (req, res) => {
