@@ -5,9 +5,11 @@ import { StoreContext } from "../../context/StoreContext";
 import axios from "axios";
 import { toast } from 'react-toastify';
 
-function LoginPopup() {
+function LoginPopup({setShowLogin}) {
   const { url, setToken } = useContext(StoreContext);
-  const [isLogin, setIsLogin] = useState(true); // Use boolean state for login/register
+  const [isLogin, setIsLogin] = useState(true);
+  
+// Use boolean state for login/register
   const [data, setData] = useState({
     name: "",
     email: "",
