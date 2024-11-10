@@ -1,22 +1,17 @@
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
-import paypal from "paypal-rest-sdk";
+import Stripe from "stripe";
 import dotenv from "dotenv";
 dotenv.config();
 
-// Configure PayPal with the credentials you got when you created your PayPal app
-paypal.configure({
-    mode: "sandbox", // or "live"
-    client_id: process.env.CLIENT_ID,
-    client_secret: process.env.SECRET_ID
-});
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Placing user order for frontend
 const placeOrder = async (req, res) => {
+    const frontend_url = process.env.CLIENT_URL || "http://localhost:5173";
     try {
-        const { userId } = req.body;
-        console.log(userId);
-        
+        const { userId, items, amount, address } = req.body;
+        console.log("userId", userId);
 
         if (!userId) {
             return res.status(400).json({ success: false, message: "User ID is required" });
@@ -24,81 +19,59 @@ const placeOrder = async (req, res) => {
 
         // Create a new order in the database
         const newOrder = new orderModel({
-            userId: req.body.userId,
-            items: req.body.items,
-            amount: req.body.amount,
-            address: req.body.address
+            userId,
+            items,
+            amount,
+            address
         });
         await newOrder.save();
-        await userModel.findByIdAndUpdate(req.body.userId, { cartData: {} });
+        await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
-        // Prepare items for PayPal payment
-        const items = req.body.items.map(item => ({
-            name: item.name,
-            sku: item._id,
-            price: (item.price / 80).toFixed(2), // Assuming price is in INR and converting to USD
-            currency: "USD",
-            quantity: item.quantity
+        // Prepare items for Stripe payment
+        const lineItems = items.map((item) => ({
+            price_data: {
+                currency: 'inr',
+                product_data: {
+                    name: item.name,
+                },
+                unit_amount: item.price * 100*80, // Stripe expects the amount in cents
+            },
+            quantity: item.quantity,
         }));
-
-        const deliveryCharge = {
-            name: "Delivery Charge",
-            sku: "delivery",
-            price: (2 / 80).toFixed(2), // Assuming delivery charge is in INR and converting to USD
-            currency: "USD",
-            quantity: 1
-        };
-
-        const itemTotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        const deliveryAmount = parseFloat(deliveryCharge.price);
-        const totalAmount = (itemTotal + deliveryAmount).toFixed(2);
-
-        // Create PayPal payment JSON
-        const create_payment_json = {
-            intent: "sale",
-            payer: {
-                payment_method: "paypal"
-            },
-            redirect_urls: {
-                return_url: `http://localhost:5174/verify?success=true&orderId=${newOrder._id}`,
-                cancel_url: `http://localhost:5174/verify?success=false&orderId=${newOrder._id}`
-            },
-            transactions: [{
-                item_list: {
-                    items: items.concat(deliveryCharge)
+        lineItems.push({
+            price_data: {
+                currency: 'inr',
+                product_data: {
+                    name: 'Delivery Charge',
                 },
-                amount: {
-                    currency: "USD",
-                    total: totalAmount,
-                    details: {
-                        subtotal: totalAmount
-                    }
-                },
-                description: "This is the payment description."
-            }]
-        };
-
-        // Create PayPal payment
-        paypal.payment.create(create_payment_json, (error, payment) => {
-            if (error) {
-                console.error("PayPal Error:", error.response);
-                res.status(500).json({ success: false, message: "Failed to create PayPal payment", error: error.response });
-            } else {
-                const approvalUrl = payment.links.find(link => link.rel === "approval_url").href;
-                res.status(200).json({ success: true, approval_url: approvalUrl });
-            }
+                unit_amount: 2*100*80, // Assuming delivery charge is $2
+            },
+            quantity: 1,
         });
+
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            line_items: lineItems,
+            mode: 'payment',
+            success_url: `${frontend_url}/verify?success=true&orderId=${newOrder._id}`,
+            cancel_url: `${frontend_url}/verify?success=false&orderId=${newOrder._id}`,
+        });
+
+        res.status(200).json({ success: true, sessionId: session.id });
     } catch (err) {
         console.error("Order Creation Error:", err);
-        res.status(500).json({ success: false, message: "Failed to place order", error: err });
+        res.status(500).json({ success: false, message: "Failed to create Stripe Checkout session", error: err.message });
     }
 };
+
 const verifyOrder = async (req, res) => {
-    const { orderId, success } = req.query; 
-    console.log(orderId);
-    // Use req.query to get orderId and success from URL
+    const {orderId, success  } = req.query;
+    console.log("orderId", orderId);
+   
+    
+
     try {
-        if (success === 'true') {
+        if (success=='true') {
             await orderModel.findByIdAndUpdate(orderId, { payment: true });
             res.json({ success: true, message: "Order placed successfully" });
         } else {
@@ -110,13 +83,14 @@ const verifyOrder = async (req, res) => {
         res.json({ success: false, message: "Failed to verify order" });
     }
 };
+
 // Fetch user orders
 const userOrders = async (req, res) => {
     try {
         const userId = req.body.userId; // Assuming the user ID is stored in req.user by the auth middleware
         console.log("userId", userId);
 
-        const orders = await orderModel.find({userId});
+        const orders = await orderModel.find({ userId });
 
         if (!orders || orders.length === 0) {
             return res.status(404).json({ success: false, message: "No orders found for this user" });
@@ -128,9 +102,6 @@ const userOrders = async (req, res) => {
         res.status(500).json({ success: false, message: "Failed to fetch user orders", error: err });
     }
 };
-
-
-
 
 const listOrders = async (req, res) => {
     try {
