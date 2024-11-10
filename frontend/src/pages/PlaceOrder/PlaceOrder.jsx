@@ -5,7 +5,9 @@ import axios from "axios";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
-import PayPalButton from "./PayPalButton"; // Correct import path for PayPalButton
+import { loadStripe } from "@stripe/stripe-js";
+
+const stripePromise = loadStripe("pk_test_51Q1PDXRxtuQAB4ULDzE4tIwxApkd7mhc9mBwhahTrQ9cpXUS7JBQN1WXfPyCjLIQMLuICrPMXpWTML6yyPBFdmVU00RbzEBqCF");
 
 function PlaceOrder() {
   const { getTotalCartAmount, token, cartItems, url, food_list } = useContext(StoreContext);
@@ -36,7 +38,8 @@ function PlaceOrder() {
     setData((prevData) => ({ ...prevData, [name]: value }));
   };
 
-  const createOrder = async () => {
+  const handleCheckout = async (e) => {
+    e.preventDefault();
     try {
       let orderItems = [];
       food_list.forEach((item) => {
@@ -57,10 +60,16 @@ function PlaceOrder() {
       });
 
       if (response.data.success) {
-        return response.data.orderID; // Return the order ID for PayPal
+        const stripe = await stripePromise;
+        const { error } = await stripe.redirectToCheckout({
+          sessionId: response.data.sessionId,
+        });
+        if (error) {
+          console.error('Stripe Checkout error:', error);
+          toast.error('Error redirecting to Stripe Checkout');
+        }
       } else {
         toast.error(response.data.message);
-        throw new Error("Order creation failed");
       }
     } catch (error) {
       console.error('Error creating order:', error);
@@ -68,26 +77,8 @@ function PlaceOrder() {
     }
   };
 
-  const onApprove = async (orderID) => {
-    try {
-      let response = await axios.post(url + "/api/order/verify", { orderID, success: true }, {
-        headers: { token },
-      });
-
-      if (response.data.success) {
-        toast.success("Order placed successfully!");
-        navigate('/orders'); // Redirect to orders page or any other page
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error('Error verifying order:', error);
-      toast.error('Error verifying order');
-    }
-  };
-
   return (
-    <form className="place-order" onSubmit={(e) => e.preventDefault()}>
+    <form className="place-order" onSubmit={handleCheckout}>
       <ToastContainer />
       <div className="place-order-left">
         <p className="title">Delivery Information</p>
@@ -190,7 +181,7 @@ function PlaceOrder() {
                 ${getTotalCartAmount() === 0 ? 0 : getTotalCartAmount() + 2}
               </b>
             </div>
-            <PayPalButton createOrder={createOrder} onApprove={onApprove} />
+            <button type="submit">Pay with Stripe</button>
           </div>
         </div>
       </div>
