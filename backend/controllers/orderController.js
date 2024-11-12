@@ -8,7 +8,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Placing user order for frontend
 const placeOrder = async (req, res) => {
-    const frontend_url = process.env.CLIENT_URL || "https://food-delivery-frontend-2go0.onrender.com";
+    const frontend_url = process.env.CLIENT_URL || "http://localhost:5173";
     try {
         const { userId, items, amount, address } = req.body;
         console.log("userId", userId);
@@ -65,22 +65,34 @@ const placeOrder = async (req, res) => {
 };
 
 const verifyOrder = async (req, res) => {
-    const {orderId, success  } = req.query;
+    const { success, orderId } = req.query;
     console.log("orderId", orderId);
-   
-    
+
+    if (!orderId) {
+        return res.status(400).json({ success: false, message: "Order ID is required" });
+    }
 
     try {
-        if (success=='true') {
-            await orderModel.findByIdAndUpdate(orderId, { payment: true });
-            res.json({ success: true, message: "Order placed successfully" });
+        if (success === 'true') {
+            const updatedOrder = await orderModel.findByIdAndUpdate(orderId, { payment: true }, { new: true });
+            if (!updatedOrder) {
+                console.log(`Order not found for ID: ${orderId}`);
+                return res.status(404).json({ success: false, message: "Order not found" });
+            }
+            console.log(`Order ${orderId} payment status updated to true`);
+            res.json({ success: true, message: "Order placed successfully", order: updatedOrder });
         } else {
-            await orderModel.findByIdAndDelete(orderId);
-            res.json({ success: false, message: "Order failed" });
+            const deletedOrder = await orderModel.findByIdAndDelete(orderId);
+            if (!deletedOrder) {
+                console.log(`Order not found for ID: ${orderId}`);
+                return res.status(404).json({ success: false, message: "Order not found" });
+            }
+            console.log(`Order ${orderId} deleted`);
+            res.json({ success: false, message: "Order failed", order: deletedOrder });
         }
     } catch (err) {
-        console.log(err);
-        res.json({ success: false, message: "Failed to verify order" });
+        console.error("Error verifying order:", err);
+        res.status(500).json({ success: false, message: "Failed to verify order", error: err.message });
     }
 };
 
