@@ -8,13 +8,13 @@ import axios from 'axios';
 
 function Add() {
   const [image, setImage] = useState(false);
+  const url="https://food-delivery-j42j.onrender.com"
   const [data, setData] = useState({
     name: '',
     description: '',
     category: 'Salad',
     price: ''
   });
-  const url="https://food-delivery-j42j.onrender.com"
 
   const onChangeHandler = (e) => {
     const name = e.target.name;
