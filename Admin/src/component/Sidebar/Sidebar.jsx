@@ -7,7 +7,7 @@ function Sidebar() {
   return (
     <div className='sidebar'> 
     <div className="sidebar-options"> 
-      <a href="/add" className="sidebar-option"> 
+      <NavLink to="/add" className="sidebar-option"> 
         <img src={assets.add_icon} alt="" />
         <p>Add Items</p>
       </a>
