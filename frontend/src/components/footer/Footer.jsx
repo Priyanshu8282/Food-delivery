@@ -15,15 +15,7 @@ function Footer() {
             <img src={assets.linkedin_icon} alt="LinkedIn" />
           </div>
         </div>
-        <div className="footer-content-center">
-          <h2>COMPANY</h2>
-          <ul>
-            <li>Home</li>
-            <li>About us</li>
-            <li>Delivery</li>
-            <li>Privacy policy</li>
-          </ul>
-        </div>
+       
         <div className="footer-content-right">
           <h2>GET IN TOUCH</h2>
           <ul>
@@ -35,6 +27,9 @@ function Footer() {
       <hr />
       <p className="footer-copyright">
         Copyright 2024 Tomato.com - All Rights Reserved.
+      </p>
+      <p className="footer-designed">
+        Designed and Developed by Priyanshu Sharma
       </p>
     </div>
   );
