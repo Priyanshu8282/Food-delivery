@@ -20,9 +20,9 @@ function Navbar({setShowLogin}) {
     <div className='navbar'> 
     <a href='/'><img src={assets.logo} alt="" className="logo"/></a>
     <ul className='navbar-menu'> 
-        <Link to='/' onClick={()=>setMenu("home")} className={menu==="home"?"active":""}>home</Link>
-        <a href='#explore-menu' onClick={()=>setMenu("menu")}  className={menu==="menu"?"active":""}>menu</a>
-        <a href='#footer' onClick={()=>setMenu("contact-us")} className={menu==="contact-us"?"active":""}>contact-us</a>
+        <Link to='/' onClick={()=>setMenu("home")} className={menu==="home"?"active":""}>Home</Link>
+        <a href='#explore-menu' onClick={()=>setMenu("menu")}  className={menu==="menu"?"active":""}>Menu</a>
+        <a href='#footer' onClick={()=>setMenu("contact-us")} className={menu==="contact-us"?"active":""}>Contact-Us</a>
     </ul>
     <div className="navbar-right">
        
